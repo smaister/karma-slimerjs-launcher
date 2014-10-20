@@ -23,6 +23,9 @@ var SlimerJSBrowser = function(id, baseBrowserDecorator, logger, args, options) 
 		+ '\n		})'
 		+ '\n	);'
 		+' \n};'
+        + '\npage.onCallback = function(arg) {'
+        + '\n    return arg === "getCompletionFunc" && slimer.exit;'
+        + '\n};'
 		+ '\npage.open("' + url + '");\n';
 		log.debug(captureCode);
 		fs.writeFileSync(captureFile, captureCode);
