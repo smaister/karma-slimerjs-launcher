@@ -1,50 +1,54 @@
-var fs = require('fs');
+var SlimerJSBrowser,
+    fs = require('fs');
 
-var SlimerJSBrowser = function(id, baseBrowserDecorator, logger, args, options) {
-	baseBrowserDecorator(this);
+SlimerJSBrowser = function(id, baseBrowserDecorator, logger, args, config) {
+    var options = args && args.options || config && config.options || {},
+        log = logger.create('launcher');
 
-	var options = args && args.options || {};
-	var log = logger.create('launcher');
+    baseBrowserDecorator(this);
 
-	this._getOptions = function(url) {
-		var self=this;
-		var command=this._getCommand();
-		// create the js file, that will open karma
-		var captureFile = self._tempDir + '/capture.js';
-		var optionsCode = Object.keys(options).map(function (key) {
-			return 'page.' + key + ' = ' + JSON.stringify(options[key]) + ';';
-		});
-		var captureCode = 'var page = require("webpage").create();\n'
-		+ optionsCode.join('\n')
-		+ '\npage.onConsoleMessage = function () {'
-		+ '\n	console.log.apply(console,'
-		+ '\n		Array.prototype.slice.call(arguments,0).forEach(function(item) {'
-		+ '\n			return JSON.stringify(item);'
-		+ '\n		})'
-		+ '\n	);'
-		+' \n};'
-        + '\npage.onCallback = function(arg) {'
-        + '\n    return arg === "getCompletionFunc" && slimer.exit;'
-        + '\n};'
-		+ '\npage.open("' + url + '");\n';
-		log.debug(captureCode);
-		fs.writeFileSync(captureFile, captureCode);
+    this._getOptions = function(url) {
+        var optionsCode, captureCode,
+            self = this,
+            captureFile = self._tempDir + '/capture.js';
 
-		// and start slimerjs
-		return [log.level.levelStr=='DEBUG' ? '--debug=true':'', captureFile];
-	};
+        // create the js file, that will open karma
+        optionsCode = Object.keys(options).map(function (key) {
+            return 'page.' + key + ' = ' + JSON.stringify(options[key]) + ';';
+        });
+
+        captureCode = 'var page = require("webpage").create();\n'
+            + optionsCode.join('\n')
+            + '\npage.onConsoleMessage = function () {'
+            + '\n	console.log.apply(console,'
+            + '\n		Array.prototype.slice.call(arguments,0).forEach(function(item) {'
+            + '\n			return JSON.stringify(item);'
+            + '\n		})'
+            + '\n	);'
+            +' \n};'
+            + '\npage.onCallback = function(arg) {'
+            + '\n    return arg === "getCompletionFunc" && slimer.exit;'
+            + '\n};'
+            + '\npage.open("' + url + '");\n';
+
+        log.debug(captureCode);
+
+        fs.writeFileSync(captureFile, captureCode);
+
+        // and start slimerjs
+        return [log.level.levelStr=='DEBUG' ? '--debug=true':'', captureFile];
+    };
 };
 
-
 SlimerJSBrowser.prototype = {
-	name: 'SlimerJS',
+    name: 'SlimerJS',
 
-	DEFAULT_CMD: {
-		linux: 'slimerjs',
-		darwin: '/Applications/SlimerJS.app/Contents/MacOS/SlimerJS-bin',
-		win32: process.env.ProgramFiles + '\\Mozilla SlimerJS\\SlimerJS.exe'
-	},
-	ENV_CMD: 'SLIMERJSLAUNCHER'
+    DEFAULT_CMD: {
+        linux: 'xvfb-slimerjs',
+        darwin: '/Applications/SlimerJS.app/Contents/MacOS/SlimerJS-bin',
+        win32: process.env.ProgramFiles + '\\Mozilla SlimerJS\\SlimerJS.exe'
+    },
+    ENV_CMD: 'SLIMERJSLAUNCHER'
 };
 
 SlimerJSBrowser.$inject = ['id', 'baseBrowserDecorator', 'logger', 'args', 'config.slimerjsLauncher'];
